@@ -47,13 +47,15 @@ def train(train_dl, encoder, decoder, criterion, encoder_optimizer, decoder_opti
 
         encoded_image = encoded_image.view(*encoded_image.size()[:2], -1)
 
-        prediction, attention_weights = decoder(encoded_image, caption, caption_len)
+        prediction, attention_weights = decoder(encoded_image, caption, caption_len - 1)
         
-        padded_prediction = torch.full((*caption.size(), decoder.vocab_size), fill_value=pad, dtype=torch.float).to(device)
+        # Adicionando padding para alinhar com o ground truth
+        padded_prediction = torch.full((caption.size(0), caption.size(1) - 1, decoder.vocab_size), fill_value=pad, dtype=torch.float).to(device)
         padded_prediction[:prediction.size(0), :prediction.size(1), :] = prediction
         padded_prediction = padded_prediction.transpose(1, 2)
 
-        loss = criterion(padded_prediction, caption)
+        # Comparando predições à partir do token após <bos>, por isso o caption[:, 1:]
+        loss = criterion(padded_prediction, caption[:, 1:])
         loss += (1. - attention_weights.sum(dim=1)**2).mean()
 
         losses.append(loss.item())
@@ -94,13 +96,15 @@ def validate(coco_val_ds, encoder, decoder, criterion, pad):
 
             encoded_images = encoded_images.view(*encoded_images.size()[:2], -1)
             
-            prediction, attention_weights = decoder(encoded_images, captions, captions_len)
+            prediction, attention_weights = decoder(encoded_images, captions, captions_len - 1)
             
-            padded_prediction = torch.full((*captions.size(), decoder.vocab_size), fill_value=pad, dtype=torch.float).to(device)
+            # Adicionando padding para alinhar com o ground truth
+            padded_prediction = torch.full((captions.size(0), captions.size(1) - 1, decoder.vocab_size), fill_value=pad, dtype=torch.float).to(device)
             padded_prediction[:prediction.size(0), :prediction.size(1), :] = prediction
             padded_prediction = padded_prediction.transpose(1, 2)
 
-            loss = criterion(padded_prediction, captions)
+            # Comparando predições à partir do token após <bos>, por isso o caption[:, 1:]
+            loss = criterion(padded_prediction, captions[:, 1:])
             loss += (1. - attention_weights.sum(dim=1)**2).mean()
 
             losses.append(loss.item())
