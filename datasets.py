@@ -8,7 +8,7 @@ from torchtext.data.utils import get_tokenizer
 from PIL import Image
 
 class CocoDS(Dataset):
-    def __init__(self, imgs_path, annotations_path):
+    def __init__(self, imgs_path, annotations_path, vocab=None):
         annotations_json = json.loads(open(annotations_path, "r").read())
         img_id_to_path = {img["id"]: img["file_name"] for img in annotations_json["images"]}
 
@@ -21,12 +21,15 @@ class CocoDS(Dataset):
 
         data_tokenized = [(img_path, ["<bos>"] + tokenizer(caption) + ["<eos>"]) for img_path, caption in data_raw]
 
-        self.vocab = build_vocab_from_iterator(
-            [caption for _, caption in data_tokenized],
-            min_freq=5,
-            specials=["<pad>", "<unk>", "<bos>", "<eos>"]
-            )
-        self.vocab.set_default_index(self.vocab["<unk>"])
+        if vocab is None:
+            self.vocab = build_vocab_from_iterator(
+                [caption for _, caption in data_tokenized],
+                min_freq=5,
+                specials=["<pad>", "<unk>", "<bos>", "<eos>"]
+                )
+            self.vocab.set_default_index(self.vocab["<unk>"])
+        else:
+            self.vocab = vocab
 
         data_lens = [(img_path, caption, len(caption)) for img_path, caption in data_tokenized]
 
@@ -56,7 +59,7 @@ class CocoDS(Dataset):
 class CocoTestDS(Dataset):
     # classe muito similar a CocoDS, mas utilizada para validação e teste do modelo. a mesma já retorna seus dados em batch,
     # porém cada batch corresponde à apenas uma única imagem com várias captações.
-    def __init__(self, imgs_path, annotations_path, vocab):
+    def __init__(self, imgs_path, annotations_path, vocab=None):
         annotations_json = json.loads(open(annotations_path, "r").read())
         img_id_to_path = {img["id"]: img["file_name"] for img in annotations_json["images"]}
 
@@ -69,12 +72,15 @@ class CocoTestDS(Dataset):
 
         data_tokenized = [(img_path, ["<bos>"] + tokenizer(caption) + ["<eos>"]) for img_path, caption in data_raw]
 
-        self.vocab = build_vocab_from_iterator(
-            [caption for _, caption in data_tokenized],
-            min_freq=5,
-            specials=["<pad>", "<unk>", "<bos>", "<eos>"]
-            )
-        self.vocab.set_default_index(self.vocab["<unk>"])
+        if vocab is None:
+            self.vocab = build_vocab_from_iterator(
+                [caption for _, caption in data_tokenized],
+                min_freq=5,
+                specials=["<pad>", "<unk>", "<bos>", "<eos>"]
+                )
+            self.vocab.set_default_index(self.vocab["<unk>"])
+        else:
+            self.vocab = vocab
 
         data_lens = [(img_path, caption, len(caption)) for img_path, caption in data_tokenized]
 

@@ -144,15 +144,25 @@ def adjust_learning_rate(optimizer, shrink_factor):
 
 def main():
     global best_score, epochs_since_improvement
-    images_path_train = "/scratch/fernandocrz/coco/images/train2017"
-    annotations_path_train = "/scratch/fernandocrz/coco/annotations/captions_train2017.json"
-    images_path_val = "/scratch/fernandocrz/coco/images/val2017"
-    annotations_path_val = "/scratch/fernandocrz/coco/annotations/captions_val2017.json"
+    images_path_train = "./coco/images/train2017"
+    annotations_path_train = "./coco/annotations/captions_train2017.json"
+    images_path_val = "./coco/images/val2017"
+    annotations_path_val = "./coco/annotations/captions_val2017.json"
+    vocab_path = "./checkpoints/vocab.pth"
 
-    coco_ds = CocoDS(images_path_train, annotations_path_train)
-    coco_val_ds = CocoTestDS(images_path_val, annotations_path_val, coco_ds.vocab)
+    if os.path.isfile(vocab_path):
+        print("[INFO] LOADING VOCABULARY ...")
+        vocab = torch.load(vocab_path)
+        coco_ds = CocoDS(images_path_train, annotations_path_train, vocab)
+    else:
+        print("[INFO] CREATING VOCABULARY ...")
+        coco_ds = CocoDS(images_path_train, annotations_path_train)
+        vocab = coco_ds.vocab
+        torch.save(vocab, vocab_path)
 
-    vocab_size = len(coco_ds.vocab)
+    coco_val_ds = CocoTestDS(images_path_val, annotations_path_val, vocab)
+
+    vocab_size = len(vocab)
     
     train_dl = DataLoader(coco_ds, batch_size=batch_size, shuffle=True)
     
