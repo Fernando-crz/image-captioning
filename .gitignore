@@ -162,4 +162,5 @@ cython_debug/
 # Application files
 
 checkpoints/
+coco/
 captioning.py
