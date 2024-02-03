@@ -39,23 +39,26 @@ def train(train_dl, encoder, decoder, criterion, encoder_optimizer, decoder_opti
 
     losses = []
 
-    for i, (image, caption, caption_len) in enumerate(train_dl):
-        image = image.to(device)
-        caption = caption.to(device)
+    for i, (images, captions, captions_len) in enumerate(train_dl):
+        images = images.to(device)
+        captions = captions.to(device)
         
-        encoded_image = encoder(image)
+        encoded_images = encoder(images)
 
-        encoded_image = encoded_image.view(*encoded_image.size()[:2], -1)
+        encoded_images = encoded_images.view(*encoded_images.size()[:2], -1)
 
-        prediction, attention_weights = decoder(encoded_image, caption, caption_len - 1)
+        prediction, attention_weights, sorted_indices = decoder(encoded_images, captions, captions_len - 1)
         
-        # Adicionando padding para alinhar com o ground truth
-        padded_prediction = torch.full((caption.size(0), caption.size(1) - 1, decoder.vocab_size), fill_value=pad, dtype=torch.float).to(device)
-        padded_prediction[:prediction.size(0), :prediction.size(1), :] = prediction
-        padded_prediction = padded_prediction.transpose(1, 2)
+        # Comparando predições à partir do token após <bos>, por isso o captions[:, 1:]
+        prediction = prediction[sorted_indices]
+        captions = captions[:, 1:][sorted_indices]
+        sorted_indices = sorted_indices.to(captions_len.device)
+        captions_len = captions_len[sorted_indices] - 1
 
-        # Comparando predições à partir do token após <bos>, por isso o caption[:, 1:]
-        loss = criterion(padded_prediction, caption[:, 1:])
+        packed_prediction = pack_padded_sequence(prediction, captions_len , batch_first=True).data
+        packed_captions = pack_padded_sequence(captions, captions_len , batch_first=True).data
+
+        loss = criterion(packed_prediction, packed_captions)
         loss += (1. - attention_weights.sum(dim=1)**2).mean()
 
         losses.append(loss.item())
@@ -96,15 +99,18 @@ def validate(coco_val_ds, encoder, decoder, criterion, pad):
 
             encoded_images = encoded_images.view(*encoded_images.size()[:2], -1)
             
-            prediction, attention_weights = decoder(encoded_images, captions, captions_len - 1)
-            
-            # Adicionando padding para alinhar com o ground truth
-            padded_prediction = torch.full((captions.size(0), captions.size(1) - 1, decoder.vocab_size), fill_value=pad, dtype=torch.float).to(device)
-            padded_prediction[:prediction.size(0), :prediction.size(1), :] = prediction
-            padded_prediction = padded_prediction.transpose(1, 2)
+            prediction, attention_weights, sorted_indices = decoder(encoded_images, captions, captions_len - 1)
+        
+            # Comparando predições à partir do token após <bos>, por isso o captions[:, 1:]
+            prediction = prediction[sorted_indices]
+            captions = captions[:, 1:][sorted_indices]
+            sorted_indices = sorted_indices.to(captions_len.device)
+            captions_len = captions_len[sorted_indices] - 1
 
-            # Comparando predições à partir do token após <bos>, por isso o caption[:, 1:]
-            loss = criterion(padded_prediction, captions[:, 1:])
+            packed_prediction = pack_padded_sequence(prediction, captions_len , batch_first=True).data
+            packed_captions = pack_padded_sequence(captions, captions_len , batch_first=True).data
+
+            loss = criterion(packed_prediction, packed_captions)
             loss += (1. - attention_weights.sum(dim=1)**2).mean()
 
             losses.append(loss.item())

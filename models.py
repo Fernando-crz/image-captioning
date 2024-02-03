@@ -121,4 +121,4 @@ class Decoder(Module):
         complete_attention_weights = complete_attention_weights[unsorted_indices]
         complete_preds = complete_preds[unsorted_indices]
 
-        return complete_preds, complete_attention_weights
+        return complete_preds, complete_attention_weights, sorted_indices
