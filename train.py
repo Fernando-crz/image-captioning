@@ -2,6 +2,7 @@ import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
 from nltk.translate.bleu_score import corpus_bleu
+from time import time
 from datasets import *
 from models import *
 from utils import *
@@ -181,13 +182,20 @@ def main():
     print(f"STARTING TRAINING WITH EPOCHS: {epochs - start_epoch} AND BATCH SIZE: {batch_size}")
     for epoch in range(start_epoch, epochs):
         print(f"STARTING TRAIN FOR EPOCH {epoch} ...")
+        train_start_time = time()
         train_losses = train(train_dl, encoder, decoder, criterion, encoder_optimizer, decoder_optimizer, epoch, pad)
-        print("TRAINING DONE\nSTARTING VALIDATION ...")
+        train_time = time() - train_start_time
+        print(f"TRAINING DONE: {train_time} seconds used.\nSTARTING VALIDATION ...")
+        
+        val_start_time = time()
         score, val_losses = validate(coco_val_ds, encoder, decoder, criterion, pad)
-        print("VALIDATION DONE\nSAVING MODEL CHECKPOINTS ...")
+        val_time = time() - val_start_time
+        print(f"VALIDATION DONE: {val_time} seconds used.\nSAVING MODEL CHECKPOINTS ...")
+        
         save_checkpoint(encoder, decoder, encoder_optimizer, decoder_optimizer, best_score, epoch, score > best_score)
         print("MODEL CHECKPOINTS SAVED\nSAVING MODEL LOSSES ...")
-        save_losses(epoch, train_losses, val_losses, score)
+        
+        save_losses(epoch, train_losses, val_losses, score, train_time, val_time)
         print("MODEL LOSSES SAVED")
 
         if score > best_score:

@@ -43,7 +43,7 @@ def save_checkpoint(encoder, decoder, encoder_optimizer, decoder_optimizer, best
         "epoch": epoch
     }, save_path_best)
 
-def save_losses(epoch, train_losses, val_losses, bleu_score):    
+def save_losses(epoch, train_losses, val_losses, bleu_score, train_time, val_time):    
     train_loss = mean(train_losses)
     val_loss = mean(val_losses)
     
@@ -51,7 +51,9 @@ def save_losses(epoch, train_losses, val_losses, bleu_score):
                 "epoch": epoch, 
                 "train_loss": train_loss, 
                 "val_loss": val_loss, 
-                "bleu_score": bleu_score
+                "bleu_score": bleu_score,
+                "train_time":train_time,
+                "val_time":val_time
              }]
     
     if os.path.exists(save_path_losses):
