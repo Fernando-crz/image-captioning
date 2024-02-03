@@ -126,10 +126,6 @@ def validate(coco_val_ds, encoder, decoder, criterion, pad):
 
             hypothesis = prediction.argmax(dim=2).tolist()
             hypotheses.extend(hypothesis)
-            print(f"Hypothesis: {hypothesis}\nReference: {caption_list}\n\n")
-
-            if i >= 2:
-                break
     
     bleu_score = corpus_bleu(references, hypotheses)
 
