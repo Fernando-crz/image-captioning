@@ -84,6 +84,7 @@ def train(train_dl, encoder, decoder, criterion, encoder_optimizer, decoder_opti
 
     return losses
 
+@torch.no_grad()
 def validate(coco_val_ds, encoder, decoder, criterion, pad):
     encoder.eval()
     decoder.eval()
@@ -93,48 +94,47 @@ def validate(coco_val_ds, encoder, decoder, criterion, pad):
     references = []
     hypotheses = []
 
-    with torch.no_grad():
-        for i, (images, captions, captions_len) in enumerate(coco_val_ds):
-            images = images.to(device)
-            captions = captions.to(device)
-            
-            encoded_images = encoder(images)
-
-            encoded_images = encoded_images.view(*encoded_images.size()[:2], -1)
-            
-            prediction, attention_weights, sorted_indices = decoder(encoded_images, captions, captions_len - 1)
+    for i, (images, captions, captions_len) in enumerate(coco_val_ds):
+        images = images.to(device)
+        captions = captions.to(device)
         
-            # Comparando predições à partir do token após <bos>, por isso o captions[:, 1:]
-            prediction = prediction[sorted_indices]
-            captions = captions[:, 1:][sorted_indices]
-            sorted_indices = sorted_indices.to(captions_len.device)
-            captions_len = captions_len[sorted_indices] - 1
+        encoded_images = encoder(images)
 
-            packed_prediction = pack_padded_sequence(prediction, captions_len , batch_first=True).data
-            packed_captions = pack_padded_sequence(captions, captions_len , batch_first=True).data
+        encoded_images = encoded_images.view(*encoded_images.size()[:2], -1)
+        
+        prediction, attention_weights, sorted_indices = decoder(encoded_images, captions, captions_len - 1)
+    
+        # Comparando predições à partir do token após <bos>, por isso o captions[:, 1:]
+        prediction = prediction[sorted_indices]
+        captions = captions[:, 1:][sorted_indices]
+        sorted_indices = sorted_indices.to(captions_len.device)
+        captions_len = captions_len[sorted_indices] - 1
 
-            loss = criterion(packed_prediction, packed_captions)
-            loss += (1. - attention_weights.sum(dim=1)**2).mean()
+        packed_prediction = pack_padded_sequence(prediction, captions_len , batch_first=True).data
+        packed_captions = pack_padded_sequence(captions, captions_len , batch_first=True).data
 
-            losses.append(loss.item())
+        loss = criterion(packed_prediction, packed_captions)
+        loss += (1. - attention_weights.sum(dim=1)**2).mean()
 
-            if i % print_freq == 0:
-                print(f"Validation Batch: {i}, Percentage done: {(i / len(coco_val_ds) * 100):.2f}%, Loss: {loss:.4f}\n")
+        losses.append(loss.item())
 
-            # Aqui, vamos gerar o conjunto de referências e hipóteses para o cálculo da score BLEU.
-            # Referências:
-            caption_list = []
-            for caption, caption_len in zip(captions, captions_len):
-                caption_list.append(caption[:(caption_len.item() + 1)].tolist())
-            
-            # O batch inteiro está se referindo à mesma imagem. Tendo isso em mente, cada hipótese vai
-            # se referir ao mesmo conjunto de captações presentes no conjunto de validação. Logo,
-            # Vamos adicionar caption_list na mesma quantidade que temos batches.
-            for _ in range(prediction.size(0)):
-                references.append(caption_list)
+        if i % print_freq == 0:
+            print(f"Validation Batch: {i}, Percentage done: {(i / len(coco_val_ds) * 100):.2f}%, Loss: {loss:.4f}\n")
 
-            hypothesis = prediction.argmax(dim=2).tolist()
-            hypotheses.extend(hypothesis)
+        # Aqui, vamos gerar o conjunto de referências e hipóteses para o cálculo da score BLEU.
+        # Referências:
+        caption_list = []
+        for caption, caption_len in zip(captions, captions_len):
+            caption_list.append(caption[:(caption_len.item() + 1)].tolist())
+        
+        # O batch inteiro está se referindo à mesma imagem. Tendo isso em mente, cada hipótese vai
+        # se referir ao mesmo conjunto de captações presentes no conjunto de validação. Logo,
+        # Vamos adicionar caption_list na mesma quantidade que temos batches.
+        for _ in range(prediction.size(0)):
+            references.append(caption_list)
+
+        hypothesis = prediction.argmax(dim=2).tolist()
+        hypotheses.extend(hypothesis)
     
     bleu_score = corpus_bleu(references, hypotheses)
 
