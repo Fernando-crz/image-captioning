@@ -30,6 +30,8 @@ batch_size = 110
 grad_clip = 5.
 best_score = 0.
 fine_tune_encoder = False
+load_checkpoint = False
+checkpoint_path = "./checkpoints/best.pth"
 
 def train(train_dl, encoder, decoder, criterion, encoder_optimizer, decoder_optimizer, epoch, pad):
     if fine_tune_encoder:
@@ -146,7 +148,7 @@ def adjust_learning_rate(optimizer, shrink_factor):
     print(f"New learning rate is {optimizer.param_groups[0]['lr']}\n")
 
 def main():
-    global best_score, epochs_since_improvement
+    global best_score, epochs_since_improvement, start_epoch
     images_path_train = "./coco/images/train2017"
     annotations_path_train = "./coco/annotations/captions_train2017.json"
     images_path_val = "./coco/images/val2017"
@@ -178,6 +180,16 @@ def main():
     decoder_optimizer = optim.Adam(params=filter(lambda p: p.requires_grad, decoder.parameters()),
                                 lr=decoder_lr)
     
+    if load_checkpoint:
+        checkpoint = torch.load(checkpoint_path)
+        encoder.load_state_dict(checkpoint['encoder'])
+        decoder.load_state_dict(checkpoint['decoder'])
+        encoder_optimizer.load_state_dict(checkpoint['encoder_optimizer'])
+        decoder_optimizer.load_state_dict(checkpoint['decoder_optimizer'])
+        start_epoch = checkpoint['epoch'] + 1
+        best_score = checkpoint['best_score']
+        print(f"LOADED CHECKPOINT FROM EPOCH {start_epoch - 1}")
+
     pad = coco_ds.vocab["<pad>"]
     print(f"STARTING TRAINING WITH EPOCHS: {epochs - start_epoch} AND BATCH SIZE: {batch_size}")
     for epoch in range(start_epoch, epochs):
