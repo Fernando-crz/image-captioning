@@ -125,7 +125,7 @@ def validate(coco_val_ds, encoder, decoder, criterion, pad):
             # Referências:
             caption_list = []
             for caption, caption_len in zip(captions, captions_len):
-                caption_list.append(caption[:caption_len.item()].tolist())
+                caption_list.append(caption[:(caption_len.item() + 1)].tolist())
             
             # O batch inteiro está se referindo à mesma imagem. Tendo isso em mente, cada hipótese vai
             # se referir ao mesmo conjunto de captações presentes no conjunto de validação. Logo,
