@@ -92,7 +92,7 @@ class Decoder(Module):
     
     def forward(self, img_embedding, captions, captions_lengths):
         # TODO: Aplicar gate beta (Página 6 do artigo)
-        # img_embedding: (batch_size, num_channels, width, height)
+        # img_embedding: (batch_size, num_channels, width * height)
         # hidden: (batch_size, hidden_size)
         # cell: (batch_size, hidden_size)
         # captions: (batch_size, max_seq_size)
