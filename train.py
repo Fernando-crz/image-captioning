@@ -62,7 +62,7 @@ def train(train_dl, encoder, decoder, criterion, encoder_optimizer, decoder_opti
         packed_captions = pack_padded_sequence(captions, captions_len , batch_first=True).data
 
         loss = criterion(packed_prediction, packed_captions)
-        loss += (1. - attention_weights.sum(dim=1)**2).mean()
+        loss += ((1. - attention_weights.sum(dim=1))**2).mean()
 
         losses.append(loss.item())
 
