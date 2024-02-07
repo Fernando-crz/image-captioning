@@ -49,8 +49,10 @@ class Attention(Module):
         self.img_attention = Linear(img_emb_size, self.attention_size)
         self.hidden_attention = Linear(hidden_size, self.attention_size)
         self.attention = Linear(self.attention_size, 1)
+        self.beta_linear = Linear(self.hidden_size, 1)
         self.relu = ReLU()
         self.softmax = nn.Softmax(dim=-1)
+        self.sigmoid = nn.Sigmoid()
     
     def forward(self, img_embedding, hidden):
         """
@@ -61,10 +63,10 @@ class Attention(Module):
         img_attention = self.img_attention(img_embedding)   # (batch_size, num_channels, attention_size)
         hidden_attention = self.hidden_attention(hidden)    # (batch_size, attention_size)
         attention_importance = self.attention(self.relu(img_attention + hidden_attention.unsqueeze(1))).squeeze(2) # (batch_size, num_channels)
-
+        beta = self.sigmoid(self.beta_linear(hidden))  # (batch_size, 1)
         attention_weights = self.softmax(attention_importance)  # (batch_size, num_channels)
 
-        context = (attention_weights.unsqueeze(2) * img_embedding).sum(dim=1)      # (batch_size, img_emb_size)
+        context = beta * (attention_weights.unsqueeze(2) * img_embedding).sum(dim=1)      # (batch_size, img_emb_size)
 
         return context, attention_weights
 
@@ -91,7 +93,6 @@ class Decoder(Module):
         return init_hidden, init_cell
     
     def forward(self, img_embedding, captions, captions_lengths):
-        # TODO: Aplicar gate beta (Página 6 do artigo)
         # img_embedding: (batch_size, num_channels, width * height)
         # hidden: (batch_size, hidden_size)
         # cell: (batch_size, hidden_size)
