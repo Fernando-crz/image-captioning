@@ -18,7 +18,6 @@ def pack_to_multibatch(captions, captions_lengths):
 class Encoder(Module):
     def __init__(self):
         super().__init__()
-        # TODO: Não utilizar ultima camada de max pooling da rede abaixo
         vgg_layers = vgg16(weights=VGG16_Weights.DEFAULT).features
         vgg_layers = list(vgg_layers.children())
 
