@@ -3,6 +3,7 @@ from torch import nn, optim
 from torch.utils.data import DataLoader
 from nltk.translate.bleu_score import corpus_bleu
 from time import time
+from contextlib import nullcontext
 from datasets import *
 from models import *
 from utils import *
@@ -46,7 +47,8 @@ def train(train_dl, encoder, decoder, criterion, encoder_optimizer, decoder_opti
         images = images.to(device)
         captions = captions.to(device)
         
-        encoded_images = encoder(images)
+        with nullcontext() if fine_tune_encoder else torch.no_grad():
+            encoded_images = encoder(images)
 
         encoded_images = encoded_images.view(*encoded_images.size()[:2], -1)
 
