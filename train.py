@@ -101,8 +101,6 @@ def validate(coco_val_ds, encoder, decoder, criterion, pad):
         captions = captions.to(device)
         
         encoded_images = encoder(images)
-
-        encoded_images = encoded_images.view(*encoded_images.size()[:2], -1)
         
         prediction, attention_weights, sorted_indices = decoder(encoded_images, captions, captions_len - 1)
     

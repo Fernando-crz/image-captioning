@@ -35,17 +35,20 @@ class Encoder(Module):
         
     def forward(self, x):
         # Lembrar que toda imagem deve ser transformada para o formato (3, 224, 224)!
-        return self.vgg(x)
+        image_embedding = self.vgg(x)
+        image_embedding = image_embedding.permute(0, 2, 3, 1)
+        image_embedding = image_embedding.view(image_embedding.size(0), -1, image_embedding.size(-1))
+        return image_embedding
 
 
 class Attention(Module):
-    def __init__(self, hidden_size, img_emb_size, attention_size):
+    def __init__(self, hidden_size, num_conv_channels, attention_size):
         super().__init__()
         self.hidden_size = hidden_size
-        self.img_emb_size = img_emb_size
+        self.num_channels = num_conv_channels
         self.attention_size = attention_size
         
-        self.img_attention = Linear(img_emb_size, self.attention_size)
+        self.img_attention = Linear(num_conv_channels, self.attention_size)
         self.hidden_attention = Linear(hidden_size, self.attention_size)
         self.attention = Linear(self.attention_size, 1)
         self.beta_linear = Linear(self.hidden_size, 1)
@@ -56,16 +59,16 @@ class Attention(Module):
     def forward(self, img_embedding, hidden):
         """
         In:
-        img_embedding: (batch_size, num_channels, img_emb_size)
+        img_embedding: (batch_size, num_conv_channels, img_emb_size)
         hidden: (batch_size, hidden_size)
         """
-        img_attention = self.img_attention(img_embedding)   # (batch_size, num_channels, attention_size)
+        img_attention = self.img_attention(img_embedding)   # (batch_size, img_emb_size, attention_size)
         hidden_attention = self.hidden_attention(hidden)    # (batch_size, attention_size)
-        attention_importance = self.attention(self.relu(img_attention + hidden_attention.unsqueeze(1))).squeeze(2) # (batch_size, num_channels)
+        attention_importance = self.attention(self.relu(img_attention + hidden_attention.unsqueeze(1))).squeeze(2) # (batch_size, img_emb_size)
         beta = self.sigmoid(self.beta_linear(hidden))  # (batch_size, 1)
-        attention_weights = self.softmax(attention_importance)  # (batch_size, num_channels)
+        attention_weights = self.softmax(attention_importance)  # (batch_size, img_emb_size)
 
-        context = beta * (attention_weights.unsqueeze(2) * img_embedding).sum(dim=1)      # (batch_size, img_emb_size)
+        context = beta * (attention_weights.unsqueeze(2) * img_embedding).sum(dim=1)      # (batch_size, num_conv_channels)
 
         return context, attention_weights
 
@@ -79,8 +82,8 @@ class Decoder(Module):
         self.img_emb_size = img_emb_size
         self.num_channels = num_channels
 
-        self.lstm = LSTMCell(img_emb_size + emb_size, hidden_size)
-        self.attention = Attention(hidden_size, img_emb_size, attention_size)
+        self.lstm = LSTMCell(num_channels + emb_size, hidden_size)
+        self.attention = Attention(hidden_size, num_channels, attention_size)
         self.embedding = Embedding(vocab_size, emb_size)
         self.lstm_fc = Linear(hidden_size, vocab_size)
         self.dropout = nn.Dropout(dropout)
@@ -92,7 +95,7 @@ class Decoder(Module):
         return init_hidden, init_cell
     
     def forward(self, img_embedding, captions, captions_lengths):
-        # img_embedding: (batch_size, num_channels, width * height)
+        # img_embedding: (batch_size, img_emb_size, num_channels)
         # hidden: (batch_size, hidden_size)
         # cell: (batch_size, hidden_size)
         # captions: (batch_size, max_seq_size)
@@ -103,7 +106,7 @@ class Decoder(Module):
         max_seq_length = len(batch_sizes)
 
         hidden, cell = self._init_hidden_and_cell_state(max_batch_size)
-        complete_attention_weights = torch.zeros(max_batch_size, max_seq_length, self.num_channels).to(device)
+        complete_attention_weights = torch.zeros(max_batch_size, max_seq_length, self.img_emb_size).to(device)
         complete_preds = torch.zeros(max_batch_size, max_seq_length, self.vocab_size).to(device)  
 
         img_embedding_sorted = img_embedding[sorted_indices]
