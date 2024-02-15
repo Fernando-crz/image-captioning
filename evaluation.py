@@ -66,6 +66,9 @@ def caption_image(encoder, decoder, image, vocab, beam_size=3):
 
     return caption, attention_list
 
+def string_from_caption(caption):
+    return " ".join(caption)
+
 @torch.no_grad()
 def get_top_k_predictions(decoder, encoded_image, token, hidden, cell, k):
     context, attention = decoder.attention(encoded_image, hidden)
