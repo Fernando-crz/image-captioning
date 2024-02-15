@@ -89,7 +89,7 @@ def visualize_attention(encoder, decoder, image, vocab, beam_size=3):
     image = img_transform(image).to(device)
     image = to_pil_image(image)
 
-    plt.figure(figsize=(20, 12))
+    plot_figure = plt.figure(figsize=(20, 12))
     plt.subplot(ceil((len(caption) + 1) / 5), 5, 1)
     plt.imshow(image)
     plt.set_cmap(cm.Greys_r)
@@ -106,7 +106,10 @@ def visualize_attention(encoder, decoder, image, vocab, beam_size=3):
         plt.set_cmap(cm.Greys_r)
         plt.axis("off")
     
-    plt.show()
+    plot_figure.canvas.draw()
+    plot_image = Image.frombytes("RGB", plot_figure.canvas.get_width_height(), plot_figure.canvas.tostring_rgb())
+    plt.close()
+    return plot_image
 
 def main():
     print("device found: ", device)
@@ -132,6 +135,7 @@ def main():
     beam_size = 3
     caption, _ = caption_image(encoder, decoder, image, vocab, beam_size)
     plot_image = visualize_attention(encoder, decoder, image, vocab, beam_size)
+    plot_image.show()
 
 if __name__ == "__main__":
     main()

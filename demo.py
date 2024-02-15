@@ -23,10 +23,21 @@ def main():
     encoder.load_state_dict(checkpoint["encoder"])
     decoder.load_state_dict(checkpoint["decoder"])
     
-    image_caption = gr.Interface(
+    caption_image_interface = gr.Interface(
         fn=lambda image: string_from_caption(caption_image(encoder, decoder, image, vocab)[0]),
         inputs="image",
         outputs="text"
+    )
+
+    visualize_attention_interface = gr.Interface(
+        fn=lambda image: visualize_attention(encoder, decoder, image, vocab),
+        inputs="image",
+        outputs="image"
+    )
+
+    demo = gr.TabbedInterface(
+        [caption_image_interface, visualize_attention_interface],
+        ["Caption Image", "Visualize Attention"]
     ).launch(share=False)
 
 
