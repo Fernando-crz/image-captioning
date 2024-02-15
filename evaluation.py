@@ -126,10 +126,12 @@ def main():
     encoder.load_state_dict(checkpoint["encoder"])
     decoder.load_state_dict(checkpoint["decoder"])
 
-    image_path = "coco/images/val2017/000000579635.jpg"
+    image_path = r"images\20240214_214626.jpg"
+    image = Image.open(image_path)
+    
     beam_size = 3
-    caption, _ = caption_image(encoder, decoder, image_path, vocab, beam_size)
-    visualize_attention(encoder, decoder, image_path, vocab, beam_size)
+    caption, _ = caption_image(encoder, decoder, image, vocab, beam_size)
+    plot_image = visualize_attention(encoder, decoder, image, vocab, beam_size)
 
 if __name__ == "__main__":
     main()
