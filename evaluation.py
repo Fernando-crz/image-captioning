@@ -62,6 +62,9 @@ def caption_image(encoder, decoder, image_path, vocab, beam_size=3):
     caption = chosen_candidate[1][:-1]
     attention_list = chosen_candidate[4][:-1]
 
+    caption = [cap.item() for cap in caption]
+    caption = vocab.lookup_tokens(caption)
+
     return caption, attention_list
 
 @torch.no_grad()
@@ -76,8 +79,6 @@ def get_top_k_predictions(decoder, encoded_image, token, hidden, cell, k):
 
 def visualize_attention(encoder, decoder, image_path, vocab, beam_size=3):
     caption, attention_list = caption_image(encoder, decoder, image_path, vocab, beam_size)
-    caption = [cap.item() for cap in caption]
-    caption = vocab.lookup_tokens(caption)
 
     upsampler = torch.nn.Upsample(scale_factor=16, mode="bilinear")
     attention_list = [upsampler(attention.view((1, 1, 14, 14))) for attention in attention_list]
