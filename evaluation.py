@@ -16,13 +16,12 @@ img_transform = Compose([
                         ])
 
 @torch.no_grad()
-def caption_image(encoder, decoder, image_path, vocab, beam_size=3):
+def caption_image(encoder, decoder, image, vocab, beam_size=3):
     # Criação de legenda de imagem à partir de método Beam Search.
     global img_transform
     encoder.eval()
     decoder.eval()
 
-    image = Image.open(image_path)
     image = img_transform(image).to(device)
 
     encoded_image = encoder(image.unsqueeze(0))
@@ -77,14 +76,13 @@ def get_top_k_predictions(decoder, encoded_image, token, hidden, cell, k):
     top_k_scores, top_k_tokens = torch.topk(preds, k)
     return top_k_scores, top_k_tokens, hidden, cell, attention
 
-def visualize_attention(encoder, decoder, image_path, vocab, beam_size=3):
-    caption, attention_list = caption_image(encoder, decoder, image_path, vocab, beam_size)
+def visualize_attention(encoder, decoder, image, vocab, beam_size=3):
+    caption, attention_list = caption_image(encoder, decoder, image, vocab, beam_size)
 
     upsampler = torch.nn.Upsample(scale_factor=16, mode="bilinear")
     attention_list = [upsampler(attention.view((1, 1, 14, 14))) for attention in attention_list]
     attention_list = [to_pil_image(attention.squeeze(0)) for attention in attention_list]
 
-    image = Image.open(image_path)
     image = img_transform(image).to(device)
     image = to_pil_image(image)
 
