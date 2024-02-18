@@ -1,8 +1,7 @@
 import torch
 from torchvision.datasets import CocoCaptions
 from torchtext.data.utils import get_tokenizer
-from nltk.translate.bleu_score import corpus_bleu
-from nltk.translate.meteor_score import meteor_score
+from datasets import load_metric
 from dataset import *
 from models import *
 from utils import *
@@ -18,8 +17,6 @@ def test_model(coco_test_ds, encoder, decoder, vocab, beam_size=3):
     encoder.eval()
     decoder.eval()
 
-    losses = []
-
     references = []
     hypotheses = []
     for i, (image, captions) in enumerate(coco_test_ds):
@@ -32,22 +29,19 @@ def test_model(coco_test_ds, encoder, decoder, vocab, beam_size=3):
             print(f"[{i}] CAPTION GENERATED: {generated_caption}")
             print(f"FIRST REFERENCE: {captions[0]}")
             print(f"Percentage of progress: {100 * i / len(coco_test_ds)}%")
-    
-    weights = [
-        (1./2., 1./2.),                 # BLEU_2 SCORE
-        (1./3., 1./3., 1./3.),          # BLEU_3_SCORE
-        (1./4., 1./4., 1./4., 1./4.)    # BLEU_4_SCORE
-    ]
 
-    bleu_score = corpus_bleu(references, hypotheses, weights=weights)
-    meteor_scores = [meteor_score(ref, hyp) for ref, hyp in zip(references, hypotheses)]
-    meteor_final_score = sum(meteor_scores) / len(meteor_scores)
-    
+    meteor = load_metric("meteor", trust_remote_code=True)
+    bleu = load_metric("bleu", trust_remote_code=True)
+
+    bleu_score = bleu.compute(predictions=hypotheses, references=references)
+    meteor_score = meteor.compute(predictions=hypotheses, references=references)
+
     scores = {
-        "BLEU_2_SCORE": bleu_score[0],
-        "BLEU_3_SCORE": bleu_score[1],
-        "BLEU_4_SCORE": bleu_score[2],
-        "METEOR_SCORE": meteor_final_score
+        "BLEU_1": bleu_score["precisions"][0],
+        "BLEU_2": bleu_score["precisions"][1],
+        "BLEU_3": bleu_score["precisions"][2],
+        "BLEU_4": bleu_score["precisions"][3],
+        "METEOR": meteor_score["meteor"]
     }
 
     print(f"[DONE] SCORES FOUND: {scores}")
@@ -81,7 +75,7 @@ def main():
     decoder.load_state_dict(checkpoint["decoder"])
 
     scores = test_model(coco_test_ds, encoder, decoder, vocab)
-    torch.save(scores, "/checkpoints/scores.pth")
+    torch.save(scores, "./checkpoints/scores.pth")
 
 if __name__ == "__main__":
     main()
