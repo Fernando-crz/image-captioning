@@ -17,7 +17,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print_freq = 200
 
 @torch.no_grad()
-def test_model(coco_test_ds, encoder, decoder, vocab):
+def test_model(coco_test_ds, encoder, decoder, vocab, beam_size=3):
     global print_freq, img_transform
     encoder.eval()
     decoder.eval()
@@ -27,7 +27,7 @@ def test_model(coco_test_ds, encoder, decoder, vocab):
     references = []
     hypotheses = []
     for i, (image, captions) in enumerate(coco_test_ds):
-        generated_caption, _ = caption_image(encoder, decoder, image, vocab)
+        generated_caption, _ = caption_image(encoder, decoder, image, vocab, beam_size=beam_size)
 
         hypotheses.append(generated_caption)
         references.append(captions)
