@@ -3,7 +3,7 @@ from torchvision.datasets import CocoCaptions
 from torchtext.data.utils import get_tokenizer
 from nltk.translate.bleu_score import corpus_bleu
 from nltk.translate.meteor_score import meteor_score
-from datasets import *
+from dataset import *
 from models import *
 from utils import *
 from evaluation import *
