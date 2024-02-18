@@ -39,7 +39,6 @@ def caption_image(encoder, decoder, image, vocab, beam_size=3):
     
     best_candidates.extend((top_k_score, [top_k_token], hidden, cell, [attention]) for top_k_score, top_k_token in zip(top_k_scores, top_k_tokens))
 
-    it = 1
     while beam_size > 0:
         possible_candidates = []
         for candidate in best_candidates:
@@ -51,11 +50,15 @@ def caption_image(encoder, decoder, image, vocab, beam_size=3):
             possible_candidates.extend((score + top_k_score, tokens + [top_k_token], hidden, cell, attention_list + [attention]) for top_k_score, top_k_token in zip(top_k_scores, top_k_tokens))
         best_candidates = sorted(possible_candidates, key=lambda x: x[0], reverse=True)[:beam_size]
 
+        candidates_to_keep = []
         for candidate in best_candidates:
             if candidate[1][-1] == vocab["<eos>"]:
                 final_candidates.append(candidate)
-                best_candidates.remove(candidate)
                 beam_size -= 1
+            else:
+                candidates_to_keep.append(candidate)
+        
+        best_candidates = candidates_to_keep
 
     chosen_candidate = sorted(final_candidates, key=lambda x: x[0], reverse=True)[0]
     caption = chosen_candidate[1][:-1]
