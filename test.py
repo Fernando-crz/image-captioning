@@ -1,12 +1,8 @@
 import torch
-from torch import nn, optim
-from torch.utils.data import DataLoader
-from torchvision.transforms.functional import to_pil_image
 from torchvision.datasets import CocoCaptions
 from torchtext.data.utils import get_tokenizer
 from nltk.translate.bleu_score import corpus_bleu
 from nltk.translate.meteor_score import meteor_score
-from time import time
 from datasets import *
 from models import *
 from utils import *
